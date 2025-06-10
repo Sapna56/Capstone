@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinical Trial Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        h2 {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .chart-section {
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 20px;
+        }
+
+        .chart-wrapper {
+            flex: 0 0 auto;
+            width: 45%;
+            min-width: 600px;
+            margin-right: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+
+        .scroll-btn {
+            font-size: 24px;
+            padding: 10px 16px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        .scroll-container {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Sponsor-wise Clinical Trial Metrics</h2>
+
+    <div class="scroll-container">
+        <button class="scroll-btn" onclick="scrollCharts(-650)">&#8592;</button>
+
+        <div class="chart-section" id="chartSection">
+            <!-- Grouped Bar Chart -->
+            <div class="chart-wrapper">
+                <canvas id="groupedChart"></canvas>
+            </div>
+
+            <!-- Sponsor Trials Line Chart -->
+            <div class="chart-wrapper">
+                <canvas id="sponsorLineChart"></canvas>
+            </div>
+        </div>
+
+        <button class="scroll-btn" onclick="scrollCharts(650)">&#8594;</button>
+    </div>
+
+    <script>
+        function scrollCharts(distance) {
+            document.getElementById('chartSection').scrollBy({ left: distance, behavior: 'smooth' });
+        }
+
+        // Grouped Bar Chart: Enrollment, Dropout, Screen Failure
+        fetch("http://localhost:8003/charts/grouped_metrics")
+            .then(res => res.json())
+            .then(({ data }) => {
+                const sponsors = data.map(d => d.sponsor);
+                const enrollment = data.map(d => d["Enrollment Rate"]);
+                const dropout = data.map(d => d["Dropout Rate"]);
+                const screenFailure = data.map(d => d["Screen Failure Rate"]);
+
+                const ctx = document.getElementById("groupedChart").getContext("2d");
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sponsors,
+                        datasets: [
+                            {
+                                label: 'Enrollment Rate',
+                                data: enrollment,
+                                backgroundColor: '#4CAF50'
+                            },
+                            {
+                                label: 'Dropout Rate',
+                                data: dropout,
+                                backgroundColor: '#F44336'
+                            },
+                            {
+                                label: 'Screen Failure Rate',
+                                data: screenFailure,
+                                backgroundColor: '#2196F3'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Sponsor-wise Trial Metrics (Grouped Bar Chart)',
+                                font: { size: 18 }
+                            },
+                            legend: { position: 'bottom' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Percentage (%)' }
+                            },
+                            x: { title: { display: true, text: 'Sponsors' } }
+                        }
+                    }
+                });
+            });
+
+        // Sponsor Trials Line Chart by Year
+        fetch("http://localhost:8003/charts/sponsor_trials_linechart")
+            .then(res => res.json())
+            .then(({ labels, datasets }) => {
+                const ctx = document.getElementById("sponsorLineChart").getContext("2d");
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets.map((s, i) => ({
+                            label: s.label,
+                            data: s.data,
+                            fill: false,
+                            borderColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'][i % 5],
+                            tension: 0.3
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Sponsor-wise Trial Count by Year (Line Chart)',
+                                font: { size: 18 }
+                            },
+                            legend: { position: 'bottom' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Trial Count' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Year' }
+                            }
+                        }
+                    }
+                });
+            });
+    </script>
+</body>
+</html>
